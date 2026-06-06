@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chord + Drum Generator</title>
+    <script id="live-context" type="application/json">__LIVE_CONTEXT_JSON__</script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #141414;
+        --panel: #202124;
+        --panel-2: #292a2f;
+        --line: #3b3c43;
+        --text: #f5f2ea;
+        --muted: #aaa59a;
+        --green: #40c9a2;
+        --yellow: #f0c75e;
+        --coral: #ff7a68;
+        --blue: #69a7ff;
+        --ink: #101113;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 180px),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        border: 1px solid var(--line);
+        background: #2b2c31;
+        color: var(--text);
+        min-height: 36px;
+        border-radius: 7px;
+        padding: 0 12px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: #696a72;
+        background: #33343a;
+      }
+
+      button.primary {
+        border-color: #64d9ba;
+        background: var(--green);
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      button.warn {
+        border-color: #ffb0a6;
+        background: #4a2925;
+      }
+
+      button.icon {
+        width: 38px;
+        min-width: 38px;
+        padding: 0;
+        font-weight: 700;
+      }
+
+      select,
+      input[type="number"],
+      input[type="text"] {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #18191c;
+        color: var(--text);
+        min-height: 36px;
+        padding: 0 10px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--green);
+      }
+
+      .app {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 100vh;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px 14px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(20, 20, 20, 0.92);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 19px;
+        line-height: 1.2;
+      }
+
+      .subtle {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status {
+        min-width: 210px;
+        max-width: 340px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: right;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 0;
+      }
+
+      aside {
+        border-right: 1px solid var(--line);
+        background: #1b1c20;
+        padding: 14px;
+        overflow: auto;
+      }
+
+      .controls {
+        display: grid;
+        gap: 13px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      label,
+      .field-title {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .slider-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .value-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 22px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #24252a;
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .segmented {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+
+      .segmented button {
+        min-height: 32px;
+        padding: 0 8px;
+        color: var(--muted);
+      }
+
+      .segmented button.active {
+        border-color: var(--yellow);
+        color: var(--text);
+        background: #403722;
+      }
+
+      .content {
+        min-width: 0;
+        overflow: auto;
+        padding: 14px 16px 18px;
+      }
+
+      section {
+        margin-bottom: 18px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.25;
+      }
+
+      .timeline {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(128px, 1fr);
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .chord-card {
+        min-height: 118px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 10px;
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        gap: 6px;
+      }
+
+      .chord-card.resolve {
+        border-color: rgba(64, 201, 162, 0.72);
+        background: #1e2b29;
+      }
+
+      .bar-label {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .chord-name {
+        font-size: 24px;
+        line-height: 1;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .roman {
+        color: var(--yellow);
+        font-size: 12px;
+      }
+
+      .notes {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .piano {
+        display: grid;
+        grid-template-columns: repeat(24, minmax(14px, 1fr));
+        gap: 3px;
+        height: 34px;
+        align-items: stretch;
+      }
+
+      .key {
+        border-radius: 4px;
+        border: 1px solid #42434a;
+        background: #34353b;
+      }
+
+      .key.black {
+        background: #18191c;
+      }
+
+      .key.on {
+        background: var(--green);
+        border-color: #91ead3;
+      }
+
+      .drum-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .drum-grid {
+        display: grid;
+        grid-template-columns: 86px 1fr;
+        min-width: 720px;
+      }
+
+      .lane-labels,
+      .lane-steps {
+        display: grid;
+      }
+
+      .lane-label {
+        height: 28px;
+        display: flex;
+        align-items: center;
+        padding-left: 10px;
+        border-bottom: 1px solid #34353b;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .step-row {
+        display: grid;
+        height: 28px;
+        border-bottom: 1px solid #34353b;
+      }
+
+      .step {
+        border-right: 1px solid #34353b;
+        position: relative;
+      }
+
+      .step.beat {
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .step.bar {
+        border-left: 2px solid #62636b;
+      }
+
+      .hit {
+        position: absolute;
+        left: 4px;
+        right: 4px;
+        top: 7px;
+        height: 12px;
+        border-radius: 6px;
+      }
+
+      .hit.kick {
+        background: var(--coral);
+      }
+
+      .hit.snare,
+      .hit.clap,
+      .hit.rim {
+        background: var(--yellow);
+      }
+
+      .hit.hat,
+      .hit.openhat {
+        background: var(--green);
+      }
+
+      .hit.perc,
+      .hit.tom {
+        background: var(--blue);
+      }
+
+      .exports {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #18191c;
+        color: var(--text);
+        padding: 10px;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-top: 1px solid var(--line);
+        background: rgba(20, 20, 20, 0.95);
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .meter {
+        display: grid;
+        grid-template-columns: repeat(16, 1fr);
+        gap: 3px;
+        width: min(360px, 42vw);
+      }
+
+      .meter span {
+        height: 7px;
+        border-radius: 4px;
+        background: #33343a;
+      }
+
+      .meter span.on {
+        background: var(--green);
+      }
+
+      @media (max-width: 760px) {
+        header,
+        footer {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .exports {
+          grid-template-columns: 1fr;
+        }
+
+        .status {
+          max-width: none;
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div>
+          <h1>Chord + Drum Generator</h1>
+          <div class="subtle" id="contextLine">Live Set</div>
+        </div>
+        <div class="status" id="status">準備中</div>
+      </header>
+
+      <main>
+        <aside>
+          <div class="controls">
+            <div class="field-row">
+              <div class="field">
+                <label for="key">Key</label>
+                <select id="key"></select>
+              </div>
+              <div class="field">
+                <label for="scale">Scale</label>
+                <select id="scale"></select>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="style">Style</label>
+                <select id="style"></select>
+              </div>
+              <div class="field">
+                <label for="bars">Bars</label>
+                <select id="bars">
+                  <option value="4">4</option>
+                  <option value="8" selected>8</option>
+                  <option value="16">16</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="tempo">Tempo</label>
+              <input id="tempo" type="number" min="40" max="240" step="1" value="92" />
+            </div>
+
+            <div class="field">
+              <div class="slider-head">
+                <span class="field-title">Chord Color</span>
+                <span class="value-chip" id="complexityValue">62</span>
+              </div>
+              <input id="complexity" type="range" min="0" max="100" value="62" />
+            </div>
+
+            <div class="field">
+              <div class="slider-head">
+                <span class="field-title">Drum Energy</span>
+                <span class="value-chip" id="energyValue">66</span>
+              </div>
+              <input id="energy" type="range" min="0" max="100" value="66" />
+            </div>
+
+            <div class="field">
+              <div class="slider-head">
+                <span class="field-title">Swing</span>
+                <span class="value-chip" id="swingValue">56</span>
+              </div>
+              <input id="swing" type="range" min="50" max="68" value="56" />
+            </div>
+
+            <div class="field">
+              <span class="field-title">Mood</span>
+              <div class="segmented" id="mood">
+                <button type="button" data-mood="smooth" class="active">Smooth</button>
+                <button type="button" data-mood="lift">Lift</button>
+                <button type="button" data-mood="dark">Dark</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="seed">Seed</label>
+              <input id="seed" type="text" value="" placeholder="auto" />
+            </div>
+
+            <button id="generate" type="button" class="primary">生成</button>
+          </div>
+        </aside>
+
+        <div class="content">
+          <section>
+            <div class="section-head">
+              <h2>Chord Progression</h2>
+              <span class="subtle" id="progressionMeta">-</span>
+            </div>
+            <div class="timeline" id="timeline"></div>
+          </section>
+
+          <section>
+            <div class="section-head">
+              <h2>Drum Pattern</h2>
+              <span class="subtle" id="drumMeta">-</span>
+            </div>
+            <div class="drum-wrap">
+              <div class="drum-grid" id="drumGrid"></div>
+            </div>
+          </section>
+
+          <section>
+            <div class="section-head">
+              <h2>Export</h2>
+              <div class="actions">
+                <button id="copyChart" type="button">コード表</button>
+                <button id="copyJson" type="button">JSON</button>
+              </div>
+            </div>
+            <div class="exports">
+              <textarea id="chartOutput" spellcheck="false"></textarea>
+              <textarea id="jsonOutput" spellcheck="false"></textarea>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <footer>
+        <div class="actions">
+          <button id="play" type="button" class="icon" title="Preview">▶</button>
+          <button id="stop" type="button" class="icon" title="Stop">■</button>
+          <button id="createLive" type="button" class="primary">Liveへ作成</button>
+          <button id="close" type="button">閉じる</button>
+        </div>
+        <div class="meter" id="meter" aria-hidden="true"></div>
+      </footer>
+    </div>
+
+    <script>
+      const DEFAULT_CONTEXT = {
+        rootNote: 0,
+        scaleName: "Major",
+        scaleMode: false,
+        tempo: 92,
+      };
+
+      const LIVE_CONTEXT = (() => {
+        try {
+          const raw = document.getElementById("live-context").textContent.trim();
+          if (!raw || raw.startsWith("__")) return DEFAULT_CONTEXT;
+          return { ...DEFAULT_CONTEXT, ...JSON.parse(raw) };
+        } catch {
+          return DEFAULT_CONTEXT;
+        }
+      })();
+
+      const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+      const SHARP_TO_FLAT = {
+        "C#": "Db",
+        "D#": "Eb",
+        "F#": "Gb",
+        "G#": "Ab",
+        "A#": "Bb",
+      };
+
+      const SCALES = {
+        major: {
+          label: "Major",
+          intervals: [0, 2, 4, 5, 7, 9, 11],
+          roman: ["I", "ii", "iii", "IV", "V", "vi", "viiø"],
+          qualities: ["maj7", "m7", "m7", "maj7", "7", "m7", "m7b5"],
+          home: "I",
+        },
+        minor: {
+          label: "Minor",
+          intervals: [0, 2, 3, 5, 7, 8, 10],
+          roman: ["i", "iiø", "III", "iv", "v", "VI", "VII"],
+          qualities: ["m7", "m7b5", "maj7", "m7", "m7", "maj7", "7"],
+          home: "i",
+        },
+        dorian: {
+          label: "Dorian",
+          intervals: [0, 2, 3, 5, 7, 9, 10],
+          roman: ["i", "ii", "III", "IV", "v", "viø", "VII"],
+          qualities: ["m7", "m7", "maj7", "7", "m7", "m7b5", "maj7"],
+          home: "i",
+        },
+        mixolydian: {
+          label: "Mixolydian",
+          intervals: [0, 2, 4, 5, 7, 9, 10],
+          roman: ["I", "ii", "iiiø", "IV", "v", "vi", "VII"],
+          qualities: ["7", "m7", "m7b5", "maj7", "m7", "m7", "maj7"],
+          home: "I",
+        },
+      };
+
+      const STYLES = {
+        lofi: {
+          label: "Lo-fi",
+          tempo: 82,
+          preferredScale: "minor",
+          templates: {
+            smooth: [[1, 6, 4, 5], [1, 3, 6, 4], [2, 5, 1, 6]],
+            lift: [[1, 5, 6, 4], [4, 5, 3, 6], [1, 2, 4, 5]],
+            dark: [[1, 7, 6, 5], [6, 7, 1, 1], [1, 4, 7, 3]],
+          },
+        },
+        citypop: {
+          label: "City Pop",
+          tempo: 104,
+          preferredScale: "major",
+          templates: {
+            smooth: [[4, 5, 3, 6], [2, 5, 1, 6], [1, 6, 2, 5]],
+            lift: [[4, 5, 3, 6, 2, 5, 1, 1], [1, 5, 6, 3, 4, 1, 4, 5]],
+            dark: [[6, 2, 5, 1], [3, 6, 2, 5], [4, 3, 6, 2]],
+          },
+        },
+        house: {
+          label: "House",
+          tempo: 124,
+          preferredScale: "minor",
+          templates: {
+            smooth: [[1, 6, 4, 7], [1, 3, 6, 7], [1, 1, 6, 7]],
+            lift: [[1, 4, 6, 5], [6, 4, 1, 5], [1, 7, 6, 7]],
+            dark: [[1, 7, 6, 7], [1, 3, 7, 6], [1, 1, 7, 6]],
+          },
+        },
+        futurebass: {
+          label: "Future Bass",
+          tempo: 150,
+          preferredScale: "minor",
+          templates: {
+            smooth: [[1, 6, 3, 7], [6, 7, 1, 3], [1, 4, 6, 7]],
+            lift: [[1, 7, 6, 4], [6, 4, 1, 7], [1, 3, 6, 7]],
+            dark: [[1, 7, 6, 5], [1, 3, 7, 6], [6, 5, 1, 7]],
+          },
+        },
+        kawaiifuturebass: {
+          label: "Kawaii Future Bass",
+          tempo: 160,
+          preferredScale: "major",
+          templates: {
+            smooth: [[1, 5, 6, 4], [4, 5, 3, 6], [1, 3, 4, 5]],
+            lift: [[4, 5, 6, 3], [1, 5, 6, 4], [4, 1, 5, 6]],
+            dark: [[6, 4, 1, 5], [3, 6, 4, 5], [6, 2, 5, 1]],
+          },
+        },
+        trap: {
+          label: "Trap",
+          tempo: 140,
+          preferredScale: "minor",
+          templates: {
+            smooth: [[1, 6, 7, 5], [1, 3, 7, 6], [1, 4, 6, 5]],
+            lift: [[1, 7, 3, 6], [6, 7, 1, 5], [1, 5, 6, 7]],
+            dark: [[1, 7, 6, 5], [1, 1, 6, 5], [1, 3, 2, 1]],
+          },
+        },
+        funk: {
+          label: "Funk",
+          tempo: 108,
+          preferredScale: "mixolydian",
+          templates: {
+            smooth: [[1, 4, 1, 5], [1, 7, 4, 1], [2, 5, 1, 1]],
+            lift: [[1, 4, 5, 4], [4, 5, 1, 6], [1, 2, 4, 5]],
+            dark: [[1, 7, 4, 1], [1, 3, 4, 7], [6, 7, 1, 1]],
+          },
+        },
+        ballad: {
+          label: "Ballad",
+          tempo: 72,
+          preferredScale: "major",
+          templates: {
+            smooth: [[1, 5, 6, 4], [1, 3, 4, 5], [4, 1, 2, 5]],
+            lift: [[1, 4, 5, 6], [4, 5, 3, 6], [1, 2, 4, 5]],
+            dark: [[6, 4, 1, 5], [1, 6, 2, 5], [6, 3, 4, 5]],
+          },
+        },
+      };
+
+      const FREE_TEMPO_STYLES = new Set(["futurebass", "kawaiifuturebass"]);
+
+      const QUALITY_INTERVALS = {
+        maj: [0, 4, 7],
+        min: [0, 3, 7],
+        dim: [0, 3, 6],
+        "7": [0, 4, 7, 10],
+        maj7: [0, 4, 7, 11],
+        m7: [0, 3, 7, 10],
+        m7b5: [0, 3, 6, 10],
+        maj9: [0, 4, 7, 11, 14],
+        m9: [0, 3, 7, 10, 14],
+        "9": [0, 4, 7, 10, 14],
+        "13": [0, 4, 7, 10, 21],
+        m11: [0, 3, 7, 10, 17],
+        add9: [0, 4, 7, 14],
+        mAdd9: [0, 3, 7, 14],
+      };
+
+      const DRUM_LANES = [
+        { id: "kick", label: "Kick", pitch: 36 },
+        { id: "snare", label: "Snare", pitch: 38 },
+        { id: "rim", label: "Rim", pitch: 37 },
+        { id: "clap", label: "Clap", pitch: 39 },
+        { id: "hat", label: "Hat", pitch: 42 },
+        { id: "openhat", label: "Open", pitch: 46 },
+        { id: "perc", label: "Perc", pitch: 75 },
+        { id: "tom", label: "Tom", pitch: 45 },
+      ];
+
+      const state = {
+        mood: "smooth",
+        progression: [],
+        chordNotes: [],
+        drumNotes: [],
+        drumHits: [],
+        settings: {},
+        timers: [],
+        audioContext: null,
+        playing: false,
+        playStartedAt: 0,
+      };
+
+      const el = {
+        key: document.getElementById("key"),
+        scale: document.getElementById("scale"),
+        style: document.getElementById("style"),
+        bars: document.getElementById("bars"),
+        tempo: document.getElementById("tempo"),
+        complexity: document.getElementById("complexity"),
+        energy: document.getElementById("energy"),
+        swing: document.getElementById("swing"),
+        seed: document.getElementById("seed"),
+        status: document.getElementById("status"),
+        timeline: document.getElementById("timeline"),
+        drumGrid: document.getElementById("drumGrid"),
+        chartOutput: document.getElementById("chartOutput"),
+        jsonOutput: document.getElementById("jsonOutput"),
+        progressionMeta: document.getElementById("progressionMeta"),
+        drumMeta: document.getElementById("drumMeta"),
+        meter: document.getElementById("meter"),
+        contextLine: document.getElementById("contextLine"),
+      };
+
+      function populateControls() {
+        NOTE_NAMES.forEach((name, index) => el.key.add(new Option(name, String(index))));
+        Object.entries(SCALES).forEach(([key, scale]) => el.scale.add(new Option(scale.label, key)));
+        Object.entries(STYLES).forEach(([key, style]) => el.style.add(new Option(style.label, key)));
+
+        el.key.value = String(Number.isFinite(LIVE_CONTEXT.rootNote) ? LIVE_CONTEXT.rootNote % 12 : 0);
+        el.tempo.value = String(Math.round(LIVE_CONTEXT.tempo || 92));
+
+        const normalizedScale = normalizeScaleName(LIVE_CONTEXT.scaleName);
+        el.scale.value = LIVE_CONTEXT.scaleMode && SCALES[normalizedScale] ? normalizedScale : "major";
+        el.contextLine.textContent = `${NOTE_NAMES[Number(el.key.value)]} ${SCALES[el.scale.value].label} / ${el.tempo.value} BPM`;
+
+        for (let i = 0; i < 16; i += 1) {
+          const bar = document.createElement("span");
+          el.meter.appendChild(bar);
+        }
+      }
+
+      function normalizeScaleName(name) {
+        const compact = String(name || "").toLowerCase().replace(/\s+/g, "");
+        if (compact.includes("dorian")) return "dorian";
+        if (compact.includes("mixolydian")) return "mixolydian";
+        if (compact.includes("minor")) return "minor";
+        return "major";
+      }
+
+      function getSettings() {
+        const styleKey = el.style.value;
+        const tempoMin = FREE_TEMPO_STYLES.has(styleKey) ? 40 : 50;
+        const tempoMax = FREE_TEMPO_STYLES.has(styleKey) ? 240 : 180;
+
+        return {
+          key: Number(el.key.value),
+          scale: el.scale.value,
+          style: styleKey,
+          bars: Number(el.bars.value),
+          tempo: clamp(Number(el.tempo.value) || STYLES[styleKey].tempo, tempoMin, tempoMax),
+          complexity: Number(el.complexity.value),
+          energy: Number(el.energy.value),
+          swing: Number(el.swing.value),
+          mood: state.mood,
+          seed: el.seed.value.trim(),
+        };
+      }
+
+      function setStatus(message) {
+        el.status.textContent = message;
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function positiveMod(value, divisor) {
+        return ((value % divisor) + divisor) % divisor;
+      }
+
+      function seededRandom(seedText) {
+        let seed = 2166136261;
+        const text = seedText || `${Date.now()}-${Math.random()}`;
+        for (let i = 0; i < text.length; i += 1) {
+          seed ^= text.charCodeAt(i);
+          seed = Math.imul(seed, 16777619);
+        }
+        return () => {
+          seed += 0x6d2b79f5;
+          let t = seed;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function pick(items, rng) {
+        return items[Math.floor(rng() * items.length)];
+      }
+
+      function weightedChance(percent, rng) {
+        return rng() < percent / 100;
+      }
+
+      function displayNote(pc) {
+        return NOTE_NAMES[positiveMod(pc, 12)];
+      }
+
+      function midiToName(midi) {
+        const pc = displayNote(midi);
+        const octave = Math.floor(midi / 12) - 1;
+        return `${pc}${octave}`;
+      }
+
+      function qualityLabel(quality) {
+        return quality
+          .replace("maj", "Maj")
+          .replace("mAdd9", "m add9")
+          .replace("m7b5", "m7b5");
+      }
+
+      function extendQuality(baseQuality, degree, settings, rng) {
+        if (settings.complexity < 28) {
+          if (baseQuality === "maj7") return "maj";
+          if (baseQuality === "m7") return "min";
+          if (baseQuality === "m7b5") return "dim";
+          return baseQuality;
+        }
+
+        if (settings.complexity > 72) {
+          if (baseQuality === "maj7" && weightedChance(68, rng)) return "maj9";
+          if (baseQuality === "m7" && weightedChance(68, rng)) return degree === 4 ? "m11" : "m9";
+          if (baseQuality === "7" && weightedChance(58, rng)) return degree === 5 ? "13" : "9";
+        }
+
+        if (settings.complexity > 52) {
+          if (baseQuality === "maj7" && weightedChance(26, rng)) return "add9";
+          if (baseQuality === "m7" && weightedChance(24, rng)) return "mAdd9";
+        }
+
+        return baseQuality;
+      }
+
+      function voiceChord(rootPc, quality, previousNotes, rng) {
+        const intervals = QUALITY_INTERVALS[quality] || QUALITY_INTERVALS.maj;
+        const candidates = [];
+
+        for (let baseOctave = 3; baseOctave <= 5; baseOctave += 1) {
+          const baseMidi = 12 * (baseOctave + 1) + rootPc;
+          let notes = intervals.map((interval) => baseMidi + interval);
+
+          for (let inversion = 0; inversion < Math.min(4, notes.length); inversion += 1) {
+            const inverted = notes.map((note, index) => (index < inversion ? note + 12 : note)).sort((a, b) => a - b);
+            const inRange = inverted.map((note) => {
+              if (note < 48) return note + 12;
+              if (note > 84) return note - 12;
+              return note;
+            });
+            candidates.push(inRange);
+          }
+        }
+
+        if (!previousNotes.length) return pick(candidates, rng);
+
+        let best = candidates[0];
+        let bestScore = Number.POSITIVE_INFINITY;
+        candidates.forEach((candidate) => {
+          const shared = Math.min(candidate.length, previousNotes.length);
+          let score = 0;
+          for (let i = 0; i < shared; i += 1) {
+            score += Math.abs(candidate[i] - previousNotes[i]);
+          }
+          score += Math.abs(64 - average(candidate)) * 0.8;
+          if (score < bestScore) {
+            best = candidate;
+            bestScore = score;
+          }
+        });
+        return best;
+      }
+
+      function average(values) {
+        return values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
+      }
+
+      function buildProgression(settings, rng) {
+        const scale = SCALES[settings.scale];
+        const style = STYLES[settings.style];
+        const bank = style.templates[settings.mood] || style.templates.smooth;
+        const template = pick(bank, rng);
+        const progression = [];
+        let previousNotes = [];
+
+        for (let bar = 0; bar < settings.bars; bar += 1) {
+          let degree = template[bar % template.length];
+          const isLast = bar === settings.bars - 1;
+
+          if (isLast && settings.mood !== "dark" && weightedChance(56, rng)) degree = 1;
+          if (bar > 0 && bar % 8 === 7 && weightedChance(settings.complexity, rng)) degree = 5;
+
+          const rootPc = positiveMod(settings.key + scale.intervals[degree - 1], 12);
+          const baseQuality = scale.qualities[degree - 1];
+          const quality = extendQuality(baseQuality, degree, settings, rng);
+          const notes = voiceChord(rootPc, quality, previousNotes, rng);
+          const rootName = displayNote(rootPc);
+          const roman = scale.roman[degree - 1];
+          const tension = chordTension(degree, quality, isLast);
+
+          progression.push({
+            bar,
+            startBeat: bar * 4,
+            duration: 4,
+            degree,
+            roman,
+            rootPc,
+            name: `${rootName}${qualityLabel(quality)}`,
+            quality,
+            notes,
+            noteNames: notes.map(midiToName),
+            tension,
+            resolves: degree === 1 || isLast,
+          });
+
+          previousNotes = notes;
+        }
+
+        return progression;
+      }
+
+      function chordTension(degree, quality, isLast) {
+        let tension = 0.32;
+        if (degree === 5 || degree === 7) tension += 0.28;
+        if (quality.includes("9") || quality.includes("11") || quality.includes("13")) tension += 0.18;
+        if (quality.includes("b5")) tension += 0.16;
+        if (isLast) tension -= 0.14;
+        return clamp(tension, 0.08, 0.92);
+      }
+
+      function buildChordNotes(progression, settings) {
+        const velocity = Math.round(72 + settings.complexity * 0.24);
+        return progression.flatMap((chord) =>
+          chord.notes.map((pitch) => ({
+            pitch: clamp(pitch, 0, 127),
+            startTime: chord.startBeat,
+            duration: 3.86,
+            velocity: clamp(velocity - Math.round(chord.tension * 10), 32, 112),
+          })),
+        );
+      }
+
+      function buildDrums(progression, settings, rng) {
+        const notes = [];
+        const hits = [];
+        const energy = settings.energy;
+        const style = settings.style;
+        const swingOffset = ((settings.swing - 50) / 18) * 0.055;
+
+        const add = (lane, bar, step, velocity = 86, duration = 0.12, probability = 1) => {
+          if (probability < 1 && rng() > probability) return;
+          const drum = DRUM_LANES.find((item) => item.id === lane);
+          if (!drum) return;
+          const position = bar * 4 + step * 0.25 + (step % 2 === 1 ? swingOffset : 0);
+          const note = {
+            pitch: drum.pitch,
+            startTime: Number(position.toFixed(4)),
+            duration,
+            velocity: clamp(Math.round(velocity), 1, 127),
+          };
+          notes.push(note);
+          hits.push({ lane, bar, step, velocity: note.velocity });
+        };
+
+        progression.forEach((chord, index) => {
+          const next = progression[index + 1] || progression[0];
+          const rootLeap = Math.abs(((next.rootPc - chord.rootPc + 6 + 12) % 12) - 6);
+          const changeAccent = clamp(0.42 + chord.tension * 0.35 + rootLeap * 0.035, 0, 0.96);
+
+          add("kick", chord.bar, 0, 92 + energy * 0.24);
+
+          if (style === "house") {
+            [4, 8, 12].forEach((step) => add("kick", chord.bar, step, 88 + energy * 0.18));
+            [4, 12].forEach((step) => add("clap", chord.bar, step, 84 + energy * 0.16));
+            [2, 6, 10, 14].forEach((step) => add("openhat", chord.bar, step, 60 + energy * 0.34));
+            every(energy > 62 ? 2 : 4).forEach((step) => add("hat", chord.bar, step, 42 + energy * 0.24, 0.08, step % 4 === 0 ? 0.55 : 1));
+            add("perc", chord.bar, 7, 48 + energy * 0.22, 0.08, changeAccent);
+          } else if (style === "futurebass" || style === "kawaiifuturebass") {
+            const kawaii = style === "kawaiifuturebass";
+            [8].forEach((step) => add(kawaii ? "clap" : "snare", chord.bar, step, 92 + energy * 0.2));
+            [3, 10, 14].forEach((step) => add("kick", chord.bar, step, 78 + energy * 0.27, 0.12, step === 10 ? changeAccent : 0.62));
+            if (kawaii) [6, 12].forEach((step) => add("kick", chord.bar, step, 68 + energy * 0.22, 0.1, 0.46 + chord.tension * 0.22));
+            every(energy > 68 || kawaii ? 1 : 2).forEach((step) => {
+              const accent = step % 4 === 2 || (kawaii && step % 4 === 1);
+              add("hat", chord.bar, step, accent ? 50 + energy * 0.24 : 34 + energy * 0.18, 0.055, step % 4 === 0 ? 0.55 : 0.92);
+            });
+            [6, 14].forEach((step) => add("openhat", chord.bar, step, 48 + energy * 0.28, 0.12, 0.36 + chord.tension * 0.32));
+            [5, 11].forEach((step) => add(kawaii ? "rim" : "perc", chord.bar, step, 42 + energy * 0.24, 0.07, 0.34 + chord.tension * 0.28));
+            if (energy > 62 || chord.tension > 0.6) [13, 14, 15].forEach((step) => add("hat", chord.bar, step, 52 + step * 2, 0.04, kawaii ? 0.92 : 0.72));
+          } else if (style === "trap") {
+            [8].forEach((step) => add("snare", chord.bar, step, 88 + energy * 0.18));
+            [0, 3, 10].forEach((step) => add("kick", chord.bar, step, 82 + energy * 0.26, 0.12, step === 0 ? 1 : changeAccent));
+            every(energy > 58 ? 1 : 2).forEach((step) => add("hat", chord.bar, step, 42 + energy * 0.28, 0.055, step % 2 === 0 ? 1 : energy / 118));
+            if (energy > 64 || chord.tension > 0.62) [13, 14, 15].forEach((step) => add("hat", chord.bar, step, 54 + step * 2, 0.04, 0.78));
+          } else if (style === "funk") {
+            [3, 6, 10, 14].forEach((step) => add("kick", chord.bar, step, 72 + energy * 0.26, 0.11, step === 6 ? changeAccent : 0.65));
+            [4, 12].forEach((step) => add("snare", chord.bar, step, 78 + energy * 0.2));
+            [2, 7, 11, 15].forEach((step) => add("snare", chord.bar, step, 32 + energy * 0.18, 0.08, 0.36 + chord.tension * 0.22));
+            every(2).forEach((step) => add("hat", chord.bar, step, 48 + energy * 0.2, 0.08, 0.92));
+            [5, 13].forEach((step) => add("openhat", chord.bar, step, 50 + energy * 0.24, 0.12, 0.42 + chord.tension * 0.24));
+          } else if (style === "ballad") {
+            [10].forEach((step) => add("kick", chord.bar, step, 64 + energy * 0.24, 0.14, changeAccent));
+            [4, 12].forEach((step) => add("rim", chord.bar, step, 58 + energy * 0.18));
+            [2, 6, 10, 14].forEach((step) => add("hat", chord.bar, step, 36 + energy * 0.2, 0.08, 0.7));
+          } else {
+            [6, 10].forEach((step) => add("kick", chord.bar, step, 72 + energy * 0.24, 0.12, step === 10 ? 0.62 : changeAccent));
+            [4, 12].forEach((step) => add("snare", chord.bar, step, 76 + energy * 0.2));
+            every(energy > 72 ? 1 : 2).forEach((step) => add("hat", chord.bar, step, 38 + energy * 0.25, 0.065, step % 4 === 0 ? 0.45 : 0.9));
+            [14].forEach((step) => add("openhat", chord.bar, step, 46 + energy * 0.22, 0.11, 0.3 + chord.tension * 0.34));
+            add("perc", chord.bar, 11, 42 + energy * 0.24, 0.08, 0.28 + chord.tension * 0.3);
+          }
+
+          if (index > 0 && chord.degree === 1) {
+            add("kick", chord.bar, 15, 58 + energy * 0.18, 0.08, 0.48);
+          }
+
+          if ((index + 1) % 4 === 0 && (energy > 58 || chord.tension > 0.55)) {
+            [12, 13, 14, 15].forEach((step, fillIndex) => {
+              const lane = fillIndex < 2 ? "snare" : "tom";
+              add(lane, chord.bar, step, 48 + energy * 0.28 + fillIndex * 5, 0.08, 0.66);
+            });
+          }
+        });
+
+        return {
+          notes: dedupeNotes(notes).sort((a, b) => a.startTime - b.startTime || a.pitch - b.pitch),
+          hits,
+        };
+      }
+
+      function every(interval) {
+        const result = [];
+        for (let step = 0; step < 16; step += interval) result.push(step);
+        return result;
+      }
+
+      function dedupeNotes(notes) {
+        const seen = new Set();
+        return notes.filter((note) => {
+          const key = `${note.pitch}-${note.startTime.toFixed(4)}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+
+      function generate() {
+        const settings = getSettings();
+        const seed = settings.seed || `${settings.key}-${settings.scale}-${settings.style}-${settings.mood}-${Date.now()}`;
+        const rng = seededRandom(seed);
+        const progression = buildProgression(settings, rng);
+        const chordNotes = buildChordNotes(progression, settings);
+        const drums = buildDrums(progression, settings, rng);
+
+        state.settings = settings;
+        state.progression = progression;
+        state.chordNotes = chordNotes;
+        state.drumNotes = drums.notes;
+        state.drumHits = drums.hits;
+
+        render();
+        setStatus(`${progression.length} bars / ${drums.notes.length} drum notes`);
+      }
+
+      function render() {
+        renderTimeline();
+        renderDrumGrid();
+        renderExport();
+        el.progressionMeta.textContent = `${NOTE_NAMES[state.settings.key]} ${SCALES[state.settings.scale].label}`;
+        el.drumMeta.textContent = `${STYLES[state.settings.style].label} / ${state.settings.swing}% swing`;
+      }
+
+      function renderTimeline() {
+        el.timeline.innerHTML = "";
+        state.progression.forEach((chord) => {
+          const card = document.createElement("article");
+          card.className = `chord-card${chord.resolves ? " resolve" : ""}`;
+          card.innerHTML = `
+            <div class="bar-label">Bar ${chord.bar + 1}</div>
+            <div class="chord-name">${chord.name}</div>
+            <div class="roman">${chord.roman}</div>
+            <div class="notes">${chord.noteNames.join(" ")}</div>
+            <div class="piano" aria-hidden="true">${renderPiano(chord.notes)}</div>
+          `;
+          el.timeline.appendChild(card);
+        });
+      }
+
+      function renderPiano(notes) {
+        const pcs = new Set(notes.map((note) => positiveMod(note, 12)));
+        const black = new Set([1, 3, 6, 8, 10]);
+        let html = "";
+        for (let i = 0; i < 24; i += 1) {
+          const pc = i % 12;
+          html += `<span class="key${black.has(pc) ? " black" : ""}${pcs.has(pc) ? " on" : ""}"></span>`;
+        }
+        return html;
+      }
+
+      function renderDrumGrid() {
+        const totalSteps = state.settings.bars * 16;
+        const hitsByLane = new Map();
+        state.drumHits.forEach((hit) => {
+          const key = `${hit.lane}-${hit.bar * 16 + hit.step}`;
+          hitsByLane.set(key, hit);
+        });
+
+        const labels = document.createElement("div");
+        labels.className = "lane-labels";
+        const steps = document.createElement("div");
+        steps.className = "lane-steps";
+
+        DRUM_LANES.forEach((lane) => {
+          const label = document.createElement("div");
+          label.className = "lane-label";
+          label.textContent = lane.label;
+          labels.appendChild(label);
+
+          const row = document.createElement("div");
+          row.className = "step-row";
+          row.style.gridTemplateColumns = `repeat(${totalSteps}, minmax(14px, 1fr))`;
+          for (let step = 0; step < totalSteps; step += 1) {
+            const cell = document.createElement("span");
+            const localStep = step % 16;
+            cell.className = `step${localStep % 4 === 0 ? " beat" : ""}${localStep === 0 ? " bar" : ""}`;
+            const hit = hitsByLane.get(`${lane.id}-${step}`);
+            if (hit) {
+              const dot = document.createElement("span");
+              dot.className = `hit ${lane.id}`;
+              dot.style.opacity = String(clamp(hit.velocity / 110, 0.45, 1));
+              cell.appendChild(dot);
+            }
+            row.appendChild(cell);
+          }
+          steps.appendChild(row);
+        });
+
+        el.drumGrid.innerHTML = "";
+        el.drumGrid.append(labels, steps);
+      }
+
+      function renderExport() {
+        const chart = state.progression
+          .map((chord) => `Bar ${String(chord.bar + 1).padStart(2, "0")}: ${chord.name.padEnd(9, " ")} ${chord.roman.padEnd(4, " ")} ${chord.noteNames.join(" ")}`)
+          .join("\n");
+        const payload = buildPayload();
+        el.chartOutput.value = chart;
+        el.jsonOutput.value = JSON.stringify(payload, null, 2);
+      }
+
+      function buildPayload() {
+        return {
+          action: "create_midi_clips",
+          version: 1,
+          title: `${NOTE_NAMES[state.settings.key]} ${SCALES[state.settings.scale].label} ${STYLES[state.settings.style].label}`,
+          lengthBeats: state.settings.bars * 4,
+          tempo: state.settings.tempo,
+          chordTrackName: "Generated Chords",
+          drumTrackName: "Generated Drums",
+          settings: state.settings,
+          progression: state.progression.map((chord) => ({
+            bar: chord.bar + 1,
+            chord: chord.name,
+            roman: chord.roman,
+            notes: chord.noteNames,
+          })),
+          chordNotes: state.chordNotes,
+          drumNotes: state.drumNotes,
+        };
+      }
+
+      function closeWithResult(result) {
+        const message = { method: "close_and_send", params: [result] };
+        if (window.webkit?.messageHandlers?.live) {
+          window.webkit.messageHandlers.live.postMessage(message);
+          return true;
+        }
+        if (window.chrome?.webview) {
+          window.chrome.webview.postMessage(message);
+          return true;
+        }
+        setStatus("Liveホスト内で開くと作成できます");
+        return false;
+      }
+
+      async function copyText(text, label) {
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus(`${label}をコピーしました`);
+        } catch {
+          const helper = document.createElement("textarea");
+          helper.value = text;
+          document.body.appendChild(helper);
+          helper.select();
+          document.execCommand("copy");
+          helper.remove();
+          setStatus(`${label}をコピーしました`);
+        }
+      }
+
+      function ensureGenerated() {
+        if (!state.progression.length) generate();
+      }
+
+      async function playPreview() {
+        ensureGenerated();
+        stopPreview();
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          setStatus("Audio preview unavailable");
+          return;
+        }
+
+        const ctx = new AudioContextClass();
+        state.audioContext = ctx;
+        state.playing = true;
+        state.playStartedAt = ctx.currentTime + 0.08;
+
+        const beatSeconds = 60 / state.settings.tempo;
+        state.chordNotes.forEach((note) => scheduleChord(ctx, note, beatSeconds, state.playStartedAt));
+        state.drumNotes.forEach((note) => scheduleDrum(ctx, note, beatSeconds, state.playStartedAt));
+
+        const totalMs = state.settings.bars * 4 * beatSeconds * 1000 + 260;
+        state.timers.push(window.setTimeout(stopPreview, totalMs));
+        animateMeter();
+        setStatus("Preview playing");
+      }
+
+      function stopPreview() {
+        state.timers.forEach((timer) => window.clearTimeout(timer));
+        state.timers = [];
+        if (state.audioContext) {
+          state.audioContext.close();
+          state.audioContext = null;
+        }
+        state.playing = false;
+        Array.from(el.meter.children).forEach((child) => child.classList.remove("on"));
+      }
+
+      function scheduleChord(ctx, note, beatSeconds, startAt) {
+        const start = startAt + note.startTime * beatSeconds;
+        const duration = Math.min(note.duration * beatSeconds, 1.8);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        osc.type = "triangle";
+        osc.frequency.value = 440 * 2 ** ((note.pitch - 69) / 12);
+        filter.type = "lowpass";
+        filter.frequency.value = 1300;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime((note.velocity / 127) * 0.035, start + 0.035);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration + 0.04);
+      }
+
+      function scheduleDrum(ctx, note, beatSeconds, startAt) {
+        const start = startAt + note.startTime * beatSeconds;
+        if (note.pitch === 36) return scheduleKick(ctx, start, note.velocity);
+        if (note.pitch === 42 || note.pitch === 46) return scheduleHat(ctx, start, note.velocity, note.pitch === 46);
+        return scheduleSnare(ctx, start, note.velocity);
+      }
+
+      function scheduleKick(ctx, start, velocity) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(130, start);
+        osc.frequency.exponentialRampToValueAtTime(45, start + 0.12);
+        gain.gain.setValueAtTime((velocity / 127) * 0.28, start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.2);
+      }
+
+      function scheduleSnare(ctx, start, velocity) {
+        const buffer = noiseBuffer(ctx, 0.16);
+        const noise = ctx.createBufferSource();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+        noise.buffer = buffer;
+        filter.type = "bandpass";
+        filter.frequency.value = 1800;
+        gain.gain.setValueAtTime((velocity / 127) * 0.12, start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(start);
+      }
+
+      function scheduleHat(ctx, start, velocity, open) {
+        const buffer = noiseBuffer(ctx, open ? 0.28 : 0.08);
+        const noise = ctx.createBufferSource();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+        noise.buffer = buffer;
+        filter.type = "highpass";
+        filter.frequency.value = 6500;
+        gain.gain.setValueAtTime((velocity / 127) * 0.065, start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + (open ? 0.24 : 0.07));
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(start);
+      }
+
+      function noiseBuffer(ctx, seconds) {
+        const length = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i += 1) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        return buffer;
+      }
+
+      function animateMeter() {
+        if (!state.playing || !state.audioContext) return;
+        const beatSeconds = 60 / state.settings.tempo;
+        const elapsed = state.audioContext.currentTime - state.playStartedAt;
+        const step = positiveMod(Math.floor(elapsed / (beatSeconds / 4)), 16);
+        Array.from(el.meter.children).forEach((child, index) => {
+          child.classList.toggle("on", index <= step);
+        });
+        state.timers.push(window.setTimeout(animateMeter, 60));
+      }
+
+      function wireEvents() {
+        document.getElementById("generate").addEventListener("click", generate);
+        document.getElementById("play").addEventListener("click", playPreview);
+        document.getElementById("stop").addEventListener("click", stopPreview);
+        document.getElementById("close").addEventListener("click", () => closeWithResult("cancel"));
+        document.getElementById("createLive").addEventListener("click", () => {
+          ensureGenerated();
+          closeWithResult(JSON.stringify(buildPayload()));
+        });
+        document.getElementById("copyChart").addEventListener("click", () => copyText(el.chartOutput.value, "コード表"));
+        document.getElementById("copyJson").addEventListener("click", () => copyText(el.jsonOutput.value, "JSON"));
+
+        ["complexity", "energy", "swing"].forEach((id) => {
+          const input = document.getElementById(id);
+          const value = document.getElementById(`${id}Value`);
+          input.addEventListener("input", () => {
+            value.textContent = input.value;
+          });
+        });
+
+        el.style.addEventListener("change", () => {
+          const styleKey = el.style.value;
+          const style = STYLES[styleKey];
+          if (!FREE_TEMPO_STYLES.has(styleKey)) {
+            el.tempo.value = String(style.tempo);
+          }
+          if (!LIVE_CONTEXT.scaleMode) el.scale.value = style.preferredScale;
+        });
+
+        document.getElementById("mood").addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-mood]");
+          if (!button) return;
+          state.mood = button.dataset.mood;
+          Array.from(button.parentElement.children).forEach((item) => item.classList.toggle("active", item === button));
+        });
+      }
+
+      populateControls();
+      wireEvents();
+      generate();
+    </script>
+  </body>
+</html>

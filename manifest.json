@@ -1,0 +1,7 @@
+{
+    "name": "chord-extension",
+    "author": "Nagisa Dozono",
+    "entry": "dist/extension.js",
+    "version": "1.0.5",
+    "minimumApiVersion": "1.0.0"
+}

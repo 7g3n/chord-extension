@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+dist/
+artifacts/
+
+*.log
+*.ablx
+!chord-extension-1.0.5.ablx
+*.tsbuildinfo
+
+.env
