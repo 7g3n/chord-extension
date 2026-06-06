@@ -58,3 +58,9 @@ npm run package
 `npm run package` builds the production bundle and creates a `.ablx` archive.
 
 On Windows, `start-chord-extension-dev.bat` starts the same development host.
+
+If Live logs `Extension Host: check for installed extensions timed out`, the
+installed extension itself may still be valid while Live's AddOns process is not
+returning the installed extension list. In that case, start Live and then run
+`start-installed-chord-extension-host.bat` to launch the installed extension
+folder directly.
