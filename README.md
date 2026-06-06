@@ -12,6 +12,16 @@ Install the latest packaged extension:
 After installing the `.ablx`, restart Ableton Live so the Extension Host refreshes
 the installed extension list. The context menu item is named `chord-extension`.
 
+## Requirements
+
+Ableton Extensions are currently available in Live 12 Suite Beta, version 12.4.5
+or later. Installed `.ablx` extensions are not available in Live Standard, Intro,
+or Lite.
+
+When developing or testing on a machine where the SDK is installed, `npm start`
+can launch Live's Extension Host directly. Keep that process running while using
+the extension.
+
 ## Features
 
 - Generate chord progressions by key, scale, mood, style, length, and complexity.
@@ -46,3 +56,5 @@ npm run package
 ```
 
 `npm run package` builds the production bundle and creates a `.ablx` archive.
+
+On Windows, `start-chord-extension-dev.bat` starts the same development host.
